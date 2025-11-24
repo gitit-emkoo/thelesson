@@ -39,6 +39,10 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+# 하지만 settings.gradle은 커밋 필요
+!/android/settings.gradle
+!/android/build.gradle
+!/android/app/build.gradle
 
 # Gradle
 .gradle/
