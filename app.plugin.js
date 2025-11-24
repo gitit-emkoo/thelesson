@@ -194,34 +194,40 @@ allprojects {
         const originalContent = content;
         
         // expo-modules-core의 build.gradle에서 kotlinVersion 참조를 수정
-        // 가장 확실한 방법: 파일 시작 부분에 ext 블록 추가하고 모든 kotlinVersion 참조를 안전하게 변경
-        const kotlinVersionDef = `rootProject.ext.has('kotlinVersion') ? rootProject.ext.kotlinVersion : (findProperty('expo.kotlin.version') ?: findProperty('KOTLIN_VERSION') ?: findProperty('android.kotlinVersion') ?: findProperty('kotlinVersion') ?: '1.9.25')`;
+        // 사용자 지시에 따라 if-else 구조로 변경
+        const kotlinVersionFix = `if (project.hasProperty("kotlinVersion")) {
+    ext.kotlinVersion = project.kotlinVersion
+} else if (rootProject.ext.has("kotlinVersion")) {
+    ext.kotlinVersion = rootProject.ext.kotlinVersion
+} else {
+    ext.kotlinVersion = findProperty('expo.kotlin.version') ?: findProperty('KOTLIN_VERSION') ?: findProperty('android.kotlinVersion') ?: findProperty('kotlinVersion') ?: "1.9.25"
+}`;
         
         // 파일 시작 부분에 ext 블록이 없으면 추가
         if (!content.includes('ext {')) {
-          content = `ext {\n    kotlinVersion = ${kotlinVersionDef}\n}\n\n${content}`;
+          content = `ext {\n    ${kotlinVersionFix.replace(/\n/g, '\n    ')}\n}\n\n${content}`;
         } else {
           // ext 블록이 있으면 kotlinVersion 추가 또는 수정
           if (content.includes('kotlinVersion')) {
             // kotlinVersion이 이미 있으면 안전한 참조로 변경
             content = content.replace(
               /kotlinVersion\s*=\s*[^,\n}]+/g,
-              `kotlinVersion = ${kotlinVersionDef}`
+              kotlinVersionFix
             );
           } else {
             // ext 블록은 있지만 kotlinVersion이 없으면 추가
             content = content.replace(
               /(ext\s*\{)/,
-              `$1\n    kotlinVersion = ${kotlinVersionDef}`
+              `$1\n    ${kotlinVersionFix.replace(/\n/g, '\n    ')}`
             );
           }
         }
         
-        // kotlinVersion 변수 사용 부분을 안전한 참조로 변경 (할당문 제외)
-        // ext 블록 내부의 할당문은 이미 위에서 처리했으므로, 사용 부분만 변경
+        // kotlinVersion 변수 사용 부분을 안전한 참조로 변경
+        // ext.kotlinVersion을 사용하도록 변경
         content = content.replace(
           /([^=])\bkotlinVersion\b(?!\s*[=:])/g,
-          `$1(${kotlinVersionDef})`
+          '$1ext.kotlinVersion'
         );
         
         if (content !== originalContent) {
