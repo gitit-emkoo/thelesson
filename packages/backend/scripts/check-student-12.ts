@@ -71,3 +71,5 @@ async function checkStudent12() {
 
 checkStudent12();
 
+
+

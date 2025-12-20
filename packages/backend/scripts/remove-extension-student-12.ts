@@ -85,3 +85,5 @@ async function removeExtensionForStudent12() {
 
 removeExtensionForStudent12();
 
+
+
