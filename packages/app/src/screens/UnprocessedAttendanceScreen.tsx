@@ -20,6 +20,7 @@ interface UnprocessedItem {
 
 function UnprocessedAttendanceContent() {
   const navigation = useNavigation();
+  const fetchStudentDetail = useStudentsStore((state) => state.fetchStudentDetail);
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<UnprocessedItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<UnprocessedItem | null>(null);
