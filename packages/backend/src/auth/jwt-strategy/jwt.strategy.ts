@@ -13,7 +13,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET') || 'kimssam-secret-key-change-in-production',
+      secretOrKey: configService.get<string>('JWT_SECRET') || 'thelesson-secret-key-change-in-production',
     });
   }
 

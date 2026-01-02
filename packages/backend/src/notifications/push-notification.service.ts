@@ -30,10 +30,34 @@ export class PushNotificationService {
    */
   private initializeFirebase() {
     try {
+      // 방법 1: 파일 경로로 읽기 (우선)
+      const serviceAccountPath = this.configService.get<string>('FIREBASE_SERVICE_ACCOUNT_PATH');
+      
+      if (serviceAccountPath) {
+        const fs = require('fs');
+        const path = require('path');
+        const serviceAccountFile = path.resolve(process.cwd(), serviceAccountPath);
+        
+        if (fs.existsSync(serviceAccountFile)) {
+          const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountFile, 'utf8'));
+          
+          if (!this.firebaseApp) {
+            this.firebaseApp = admin.initializeApp({
+              credential: admin.credential.cert(serviceAccount),
+            });
+            this.logger.log('Firebase Admin initialized successfully from file');
+            return;
+          }
+        } else {
+          this.logger.warn(`Firebase service account file not found: ${serviceAccountFile}`);
+        }
+      }
+      
+      // 방법 2: 환경 변수에서 JSON 문자열로 읽기 (대체)
       const serviceAccountKey = this.configService.get<string>('FIREBASE_SERVICE_ACCOUNT_KEY');
       
       if (!serviceAccountKey) {
-        this.logger.warn('FIREBASE_SERVICE_ACCOUNT_KEY is not set. Push notifications will be disabled.');
+        this.logger.warn('FIREBASE_SERVICE_ACCOUNT_KEY or FIREBASE_SERVICE_ACCOUNT_PATH is not set. Push notifications will be disabled.');
         return;
       }
 
@@ -43,7 +67,7 @@ export class PushNotificationService {
         this.firebaseApp = admin.initializeApp({
           credential: admin.credential.cert(serviceAccount),
         });
-        this.logger.log('Firebase Admin initialized successfully');
+        this.logger.log('Firebase Admin initialized successfully from environment variable');
       }
     } catch (error) {
       this.logger.error('Failed to initialize Firebase Admin:', error);

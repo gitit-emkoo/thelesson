@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1046917946484",
+    "project_id": "thelesson",
+    "storage_bucket": "thelesson.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1046917946484:android:1f865b8d6b4a7e318a0521",
+        "android_client_info": {
+          "package_name": "com.thelesson.kwcc"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCybgT-otPtnZ7LyedoO3calrVHlRpT4u4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

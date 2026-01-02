@@ -1,4 +1,4 @@
-const { withGradleProperties, withProjectBuildGradle, withDangerousMod } = require('@expo/config-plugins');
+const { withGradleProperties, withProjectBuildGradle, withAppBuildGradle, withDangerousMod, withInfoPlist, withPodfileProperties } = require('@expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
@@ -193,41 +193,22 @@ allprojects {
         let content = fs.readFileSync(expoModulesCorePath, 'utf8');
         const originalContent = content;
         
-        // expo-modules-core의 build.gradle에서 kotlinVersion 참조를 수정
-        // 사용자 지시에 따라 if-else 구조로 변경
-        const kotlinVersionFix = `if (project.hasProperty("kotlinVersion")) {
-    ext.kotlinVersion = project.kotlinVersion
-} else if (rootProject.ext.has("kotlinVersion")) {
-    ext.kotlinVersion = rootProject.ext.kotlinVersion
-} else {
-    ext.kotlinVersion = findProperty('expo.kotlin.version') ?: findProperty('KOTLIN_VERSION') ?: findProperty('android.kotlinVersion') ?: findProperty('kotlinVersion') ?: "1.9.25"
-}`;
-        
-        // 파일 시작 부분에 ext 블록이 없으면 추가
+        // ext 블록이 없으면 먼저 추가
         if (!content.includes('ext {')) {
-          content = `ext {\n    ${kotlinVersionFix.replace(/\n/g, '\n    ')}\n}\n\n${content}`;
-        } else {
-          // ext 블록이 있으면 kotlinVersion 추가 또는 수정
-          if (content.includes('kotlinVersion')) {
-            // kotlinVersion이 이미 있으면 안전한 참조로 변경
-            content = content.replace(
-              /kotlinVersion\s*=\s*[^,\n}]+/g,
-              kotlinVersionFix
-            );
-          } else {
-            // ext 블록은 있지만 kotlinVersion이 없으면 추가
-            content = content.replace(
-              /(ext\s*\{)/,
-              `$1\n    ${kotlinVersionFix.replace(/\n/g, '\n    ')}`
-            );
-          }
+          content = `ext {\n    kotlinVersion = findProperty('kotlinVersion') ?: findProperty('android.kotlinVersion') ?: "1.9.25"\n}\n\n${content}`;
+        } else if (!content.match(/ext\s*\{[^}]*kotlinVersion/)) {
+          // ext 블록은 있지만 kotlinVersion이 없으면 추가
+          content = content.replace(
+            /(ext\s*\{)/,
+            `$1\n    kotlinVersion = findProperty('kotlinVersion') ?: findProperty('android.kotlinVersion') ?: "1.9.25"`
+          );
         }
         
-        // kotlinVersion 변수 사용 부분을 안전한 참조로 변경
-        // ext.kotlinVersion을 사용하도록 변경
+        // kotlinVersion() 메서드 호출을 findProperty로 직접 참조하도록 변경
+        // ext가 초기화되기 전에 접근하는 것을 방지
         content = content.replace(
-          /([^=])\bkotlinVersion\b(?!\s*[=:])/g,
-          '$1ext.kotlinVersion'
+          /kotlinVersion\(\)/g,
+          'findProperty("kotlinVersion") ?: findProperty("android.kotlinVersion") ?: "1.9.25"'
         );
         
         if (content !== originalContent) {
@@ -298,4 +279,301 @@ allprojects {
   return config;
 };
 
-module.exports = withKotlinVersion;
+/**
+ * iOS Firebase 설정 플러그인
+ * Podfile에 Firebase SDK 추가 및 AppDelegate 초기화
+ */
+const withFirebaseIOS = (config) => {
+  // Podfile에 Firebase SDK 추가
+  config = withDangerousMod(config, [
+    'ios',
+    async (config) => {
+      const projectRoot = config.modRequest.projectRoot;
+      const iosRoot = config.modRequest.platformProjectRoot;
+      const podfilePath = path.join(iosRoot, 'Podfile');
+      
+      if (fs.existsSync(podfilePath)) {
+        let podfileContent = fs.readFileSync(podfilePath, 'utf8');
+        const originalContent = podfileContent;
+        
+        // Firebase SDK가 이미 추가되어 있는지 확인
+        if (!podfileContent.includes('Firebase/Analytics') && !podfileContent.includes('Firebase/Messaging')) {
+          // use_frameworks! 블록 찾기
+          const useFrameworksMatch = podfileContent.match(/use_frameworks!\s*:linkage\s*=>\s*:static/);
+          
+          if (useFrameworksMatch) {
+            // Firebase SDK 추가 (use_frameworks! 블록 뒤에)
+            const firebasePods = `
+  # Firebase SDK
+  pod 'Firebase/Analytics'
+  pod 'Firebase/Messaging'
+`;
+            podfileContent = podfileContent.replace(
+              /(use_frameworks!\s*:linkage\s*=>\s*:static)/,
+              `$1${firebasePods}`
+            );
+          } else {
+            // use_frameworks! 블록이 없으면 추가
+            const targetMatch = podfileContent.match(/(target\s+['"][^'"]+['"]\s+do)/);
+            if (targetMatch) {
+              const firebasePods = `
+  use_frameworks! :linkage => :static
+  
+  # Firebase SDK
+  pod 'Firebase/Analytics'
+  pod 'Firebase/Messaging'
+`;
+              podfileContent = podfileContent.replace(
+                /(target\s+['"][^'"]+['"]\s+do)/,
+                `$1${firebasePods}`
+              );
+            }
+          }
+        }
+        
+        if (podfileContent !== originalContent) {
+          fs.writeFileSync(podfilePath, podfileContent, 'utf8');
+          console.log('Updated Podfile with Firebase SDK');
+        }
+      }
+      
+      // AppDelegate 파일 찾기 및 Firebase 초기화 코드 추가
+      const findAppDelegate = (dir) => {
+        const files = [];
+        try {
+          const entries = fs.readdirSync(dir, { withFileTypes: true });
+          for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isDirectory() && entry.name !== 'Pods' && entry.name !== '.git') {
+              files.push(...findAppDelegate(fullPath));
+            } else if (entry.isFile() && (entry.name === 'AppDelegate.swift' || entry.name === 'AppDelegate.m' || entry.name === 'AppDelegate.mm')) {
+              files.push(fullPath);
+            }
+          }
+        } catch (e) {
+          // 디렉토리를 읽을 수 없으면 무시
+        }
+        return files;
+      };
+      
+      const appDelegateFiles = findAppDelegate(iosRoot);
+      
+      for (const appDelegatePath of appDelegateFiles) {
+        let content = fs.readFileSync(appDelegatePath, 'utf8');
+        const originalContent = content;
+        const isSwift = appDelegatePath.endsWith('.swift');
+        
+        if (isSwift) {
+          // Swift AppDelegate
+          // FirebaseCore import 추가
+          if (!content.includes('import FirebaseCore')) {
+            content = content.replace(
+              /(import\s+[^\n]+\n)/,
+              "$1import FirebaseCore\n"
+            );
+          }
+          
+          // FirebaseApp.configure() 추가
+          if (!content.includes('FirebaseApp.configure()')) {
+            // application(_:didFinishLaunchingWithOptions:) 메서드 찾기
+            const didFinishLaunchingMatch = content.match(/(func\s+application\([^)]+\)\s+->\s+Bool\s*\{[\s\S]*?)(return\s+true)/);
+            if (didFinishLaunchingMatch) {
+              content = content.replace(
+                /(func\s+application\([^)]+\)\s+->\s+Bool\s*\{[\s\S]*?)(return\s+true)/,
+                "$1    FirebaseApp.configure()\n    $2"
+              );
+            } else {
+              // 메서드가 없으면 추가
+              const classMatch = content.match(/(@main\s+class\s+[^\s]+\s*:\s*[^\s]+\s*\{)/);
+              if (classMatch) {
+                content = content.replace(
+                  /(@main\s+class\s+[^\s]+\s*:\s*[^\s]+\s*\{)/,
+                  `$1\n    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {\n        FirebaseApp.configure()\n        return true\n    }`
+                );
+              }
+            }
+          }
+        } else {
+          // Objective-C AppDelegate
+          // FirebaseCore import 추가
+          if (!content.includes('#import <FirebaseCore/FirebaseCore.h>')) {
+            content = content.replace(
+              /(#import\s+[^\n]+\n)/,
+              "$1#import <FirebaseCore/FirebaseCore.h>\n"
+            );
+          }
+          
+          // FirebaseApp configure 추가
+          if (!content.includes('[FirebaseApp configure]')) {
+            const didFinishLaunchingMatch = content.match(/(-?\s*\(BOOL\)\s*application:\([^)]+\)\s+didFinishLaunchingWithOptions:\([^)]+\)\s*\{[\s\S]*?)(return\s+YES;)/);
+            if (didFinishLaunchingMatch) {
+              content = content.replace(
+                /(-?\s*\(BOOL\)\s*application:\([^)]+\)\s+didFinishLaunchingWithOptions:\([^)]+\)\s*\{[\s\S]*?)(return\s+YES;)/,
+                "$1    [FirebaseApp configure];\n    $2"
+              );
+            }
+          }
+        }
+        
+        if (content !== originalContent) {
+          fs.writeFileSync(appDelegatePath, content, 'utf8');
+          console.log(`Updated ${appDelegatePath} with Firebase initialization`);
+        }
+      }
+      
+      return config;
+    },
+  ]);
+  
+  return config;
+};
+
+/**
+ * Firebase 설정 플러그인
+ * Google Services 플러그인과 Firebase SDK 추가
+ */
+const withFirebase = (config) => {
+  // 1. 프로젝트 레벨 build.gradle에 Google Services 플러그인 추가
+  config = withProjectBuildGradle(config, (config) => {
+    if (config.modResults.language === 'groovy') {
+      let contents = config.modResults.contents;
+      
+      // plugins {} 블록에 Google Services 플러그인 추가
+      const pluginsMatch = contents.match(/plugins\s*\{([\s\S]*?)\n\}/);
+      if (pluginsMatch) {
+        let pluginsContent = pluginsMatch[1];
+        
+        // 이미 Google Services 플러그인이 있는지 확인
+        if (!pluginsContent.includes('com.google.gms.google-services')) {
+          // Google Services 플러그인 추가
+          pluginsContent += '\n    id("com.google.gms.google-services") version "4.4.4" apply false';
+          contents = contents.replace(
+            /plugins\s*\{[\s\S]*?\n\}/,
+            `plugins {\n${pluginsContent}\n}`
+          );
+        }
+      } else {
+        // plugins {} 블록이 없으면 생성
+        contents = `plugins {\n    id("com.google.gms.google-services") version "4.4.4" apply false\n}\n\n${contents}`;
+      }
+      
+      config.modResults.contents = contents;
+    } else if (config.modResults.language === 'kotlin') {
+      // Kotlin DSL 지원
+      let contents = config.modResults.contents;
+      
+      const pluginsMatch = contents.match(/plugins\s*\{([\s\S]*?)\n\}/);
+      if (pluginsMatch) {
+        let pluginsContent = pluginsMatch[1];
+        
+        if (!pluginsContent.includes('com.google.gms.google-services')) {
+          pluginsContent += '\n    id("com.google.gms.google-services") version "4.4.4" apply false';
+          contents = contents.replace(
+            /plugins\s*\{[\s\S]*?\n\}/,
+            `plugins {\n${pluginsContent}\n}`
+          );
+        }
+      } else {
+        contents = `plugins {\n    id("com.google.gms.google-services") version "4.4.4" apply false\n}\n\n${contents}`;
+      }
+      
+      config.modResults.contents = contents;
+    }
+    
+    return config;
+  });
+  
+  // 2. 앱 레벨 build.gradle에 Google Services 플러그인과 Firebase SDK 추가
+  config = withAppBuildGradle(config, (config) => {
+    if (config.modResults.language === 'groovy') {
+      let contents = config.modResults.contents;
+      
+      // plugins {} 블록에 Google Services 플러그인 추가
+      const pluginsMatch = contents.match(/plugins\s*\{([\s\S]*?)\n\}/);
+      if (pluginsMatch) {
+        let pluginsContent = pluginsMatch[1];
+        
+        if (!pluginsContent.includes('com.google.gms.google-services')) {
+          pluginsContent += '\n    id("com.google.gms.google-services")';
+          contents = contents.replace(
+            /plugins\s*\{[\s\S]*?\n\}/,
+            `plugins {\n${pluginsContent}\n}`
+          );
+        }
+      } else {
+        // plugins {} 블록이 없으면 생성
+        contents = `plugins {\n    id("com.google.gms.google-services")\n}\n\n${contents}`;
+      }
+      
+      // dependencies {} 블록에 Firebase SDK 추가
+      const dependenciesMatch = contents.match(/dependencies\s*\{([\s\S]*?)\n\}/);
+      if (dependenciesMatch) {
+        let dependenciesContent = dependenciesMatch[1];
+        
+        // Firebase BoM이 이미 있는지 확인
+        if (!dependenciesContent.includes('firebase-bom')) {
+          // Firebase BoM 추가
+          dependenciesContent = `    // Import the Firebase BoM\n    implementation(platform("com.google.firebase:firebase-bom:34.7.0"))\n    \n    // Firebase Analytics\n    implementation("com.google.firebase:firebase-analytics")\n    \n    // Firebase Cloud Messaging (FCM)\n    implementation("com.google.firebase:firebase-messaging")\n${dependenciesContent}`;
+          contents = contents.replace(
+            /dependencies\s*\{[\s\S]*?\n\}/,
+            `dependencies {\n${dependenciesContent}\n}`
+          );
+        }
+      } else {
+        // dependencies {} 블록이 없으면 생성
+        contents += `\n\ndependencies {\n    // Import the Firebase BoM\n    implementation(platform("com.google.firebase:firebase-bom:34.7.0"))\n    \n    // Firebase Analytics\n    implementation("com.google.firebase:firebase-analytics")\n    \n    // Firebase Cloud Messaging (FCM)\n    implementation("com.google.firebase:firebase-messaging")\n}`;
+      }
+      
+      config.modResults.contents = contents;
+    } else if (config.modResults.language === 'kotlin') {
+      // Kotlin DSL 지원
+      let contents = config.modResults.contents;
+      
+      const pluginsMatch = contents.match(/plugins\s*\{([\s\S]*?)\n\}/);
+      if (pluginsMatch) {
+        let pluginsContent = pluginsMatch[1];
+        
+        if (!pluginsContent.includes('com.google.gms.google-services')) {
+          pluginsContent += '\n    id("com.google.gms.google-services")';
+          contents = contents.replace(
+            /plugins\s*\{[\s\S]*?\n\}/,
+            `plugins {\n${pluginsContent}\n}`
+          );
+        }
+      } else {
+        contents = `plugins {\n    id("com.google.gms.google-services")\n}\n\n${contents}`;
+      }
+      
+      const dependenciesMatch = contents.match(/dependencies\s*\{([\s\S]*?)\n\}/);
+      if (dependenciesMatch) {
+        let dependenciesContent = dependenciesMatch[1];
+        
+        if (!dependenciesContent.includes('firebase-bom')) {
+          dependenciesContent = `    // Import the Firebase BoM\n    implementation(platform("com.google.firebase:firebase-bom:34.7.0"))\n    \n    // Firebase Analytics\n    implementation("com.google.firebase:firebase-analytics")\n    \n    // Firebase Cloud Messaging (FCM)\n    implementation("com.google.firebase:firebase-messaging")\n${dependenciesContent}`;
+          contents = contents.replace(
+            /dependencies\s*\{[\s\S]*?\n\}/,
+            `dependencies {\n${dependenciesContent}\n}`
+          );
+        }
+      } else {
+        contents += `\n\ndependencies {\n    // Import the Firebase BoM\n    implementation(platform("com.google.firebase:firebase-bom:34.7.0"))\n    \n    // Firebase Analytics\n    implementation("com.google.firebase:firebase-analytics")\n    \n    // Firebase Cloud Messaging (FCM)\n    implementation("com.google.firebase:firebase-messaging")\n}`;
+      }
+      
+      config.modResults.contents = contents;
+    }
+    
+    return config;
+  });
+  
+  return config;
+};
+
+// 모든 플러그인을 결합
+const withCombinedPlugins = (config) => {
+  config = withKotlinVersion(config);
+  config = withFirebase(config); // Android Firebase
+  config = withFirebaseIOS(config); // iOS Firebase
+  return config;
+};
+
+module.exports = withCombinedPlugins;

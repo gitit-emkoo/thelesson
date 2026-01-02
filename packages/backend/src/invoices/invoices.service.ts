@@ -3153,7 +3153,7 @@ export class InvoicesService {
       select: { name: true, org_code: true, settings: true },
     });
 
-    const businessName = user?.org_code || '김쌤';
+    const businessName = user?.org_code || 'thelesson';
 
     // 일시납부 계약 확인 (월단위 로직과 완전 분리)
     const isLumpSum = invoice.contract.payment_schedule === 'lump_sum';

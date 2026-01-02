@@ -34,7 +34,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
 
     // FCM 토큰 가져오기
     const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: '2c507d3e-8f4d-40e3-bf66-6fa305400c0f', // app.config.js의 EAS projectId
+      projectId: 'a702cc5c-f513-4ca5-8da2-522eb92ec8fa', // app.config.js의 EAS projectId
     });
 
     const fcmToken = tokenData.data;

@@ -1,10 +1,15 @@
-import 'dotenv/config';
+// dotenv를 선택적으로 로드 (없어도 동작하도록)
+try {
+  require('dotenv/config');
+} catch (e) {
+  // dotenv가 없으면 무시 (환경변수는 이미 설정되어 있을 수 있음)
+}
 
 export default ({ config }) => ({
   ...config,
   expo: {
-    name: 'KimSaem',
-    slug: 'kimssam',
+    name: 'thelesson',
+    slug: 'thelesson',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
@@ -19,7 +24,7 @@ export default ({ config }) => ({
       supportsTablet: true,
     },
     android: {
-      package: 'com.kimssam.kwcc',
+      package: 'com.thelesson.kwcc',
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff',
@@ -45,7 +50,7 @@ export default ({ config }) => ({
     ],
     extra: {
       eas: {
-        projectId: '2c507d3e-8f4d-40e3-bf66-6fa305400c0f',
+        projectId: 'a702cc5c-f513-4ca5-8da2-522eb92ec8fa',
       },
       API_URL: process.env.API_URL || 'http://localhost:3000',
       API_KEY: process.env.API_KEY || '',

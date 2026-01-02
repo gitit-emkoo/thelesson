@@ -30,7 +30,7 @@ kimssam/
 ### 백엔드 (packages/backend)
 - **NestJS** 11.0.1
 - **Prisma** 5.22.0
-- **PostgreSQL** 15.x / 16.x
+- **PostgreSQL** 15.x / 16.x (Supabase 사용)
 - **TypeScript** 5.7.3
 - **@nestjs/config** 4.0.2 (환경변수)
 
@@ -69,12 +69,33 @@ IOS_ADMOB_APP_ID=ca-app-pub-3940256099942544~1458002511
 
 ### 백엔드 (packages/backend/.env)
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5432/kimssam?schema=public"
+# Supabase 연결 문자열 (로컬 PostgreSQL 대신 사용)
+DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres?pgbouncer=true&connection_limit=1"
+# 또는 로컬 PostgreSQL 사용 시:
+# DATABASE_URL="postgresql://user:password@localhost:5432/kimssam?schema=public"
+
 PORT=3000
 NODE_ENV=development
+JWT_SECRET=please-change-in-production-very-long-secret
+JWT_EXPIRES_IN=2592000
+FIREBASE_SERVICE_ACCOUNT_KEY=your-firebase-key-here
 ```
 
+**Supabase 설정 방법**: `docs/SUPABASE_SETUP.md` 참고
+
 ## 개발 시작
+
+### Supabase 사용 (권장)
+
+1. [Supabase 프로젝트 생성](https://supabase.com) (무료)
+2. `packages/backend/.env` 파일에 Supabase `DATABASE_URL` 설정
+3. Prisma 마이그레이션 실행: `cd packages/backend && npx prisma migrate deploy`
+4. 백엔드 서버 시작: `npm run backend:start`
+5. 앱 실행: `npm run app:start`
+
+**자세한 설정 방법**: `docs/SUPABASE_SETUP.md` 참고
+
+### 로컬 PostgreSQL 사용
 
 1. 환경변수 파일 생성 및 설정
 2. PostgreSQL 데이터베이스 생성 및 연결

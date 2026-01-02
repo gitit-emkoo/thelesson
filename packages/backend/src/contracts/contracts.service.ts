@@ -1367,7 +1367,7 @@ export class ContractsService {
       select: { name: true, org_code: true },
     });
 
-    const businessName = user?.org_code || '김쌤';
+    const businessName = user?.org_code || 'thelesson';
 
     const DAY_LABELS: { [key: string]: string } = {
       SUN: '일',

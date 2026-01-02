@@ -73,7 +73,7 @@ export default function ProfileEditModal({
             <StyledTextInput
               value={orgCode}
               onChangeText={setOrgCode}
-              placeholder="예: 김쌤"
+              placeholder="예: thelesson"
               autoCapitalize="none"
             />
           </ModalContent>

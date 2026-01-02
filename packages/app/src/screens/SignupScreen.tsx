@@ -115,7 +115,7 @@ export default function SignupScreen() {
         >
           <HeaderArea>
             <LogoImage source={logoImage} resizeMode="contain" />
-            <AppSlogan>계약부터 정산까지 간편한 레슨관리 김쌤</AppSlogan>
+            <AppSlogan>계약부터 정산까지 간편한 레슨관리 thelesson</AppSlogan>
           </HeaderArea>
           <Content>
             {/* Step 표시 */}

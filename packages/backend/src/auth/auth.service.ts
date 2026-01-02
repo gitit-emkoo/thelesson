@@ -58,7 +58,7 @@ export class AuthService {
     }
 
     // TODO: 실제 SMS 전송 (예: AWS SNS, 알리고, 카카오톡 등)
-    // await this.sendSMS(phone, `김쌤 인증번호: ${code}`);
+    // await this.sendSMS(phone, `thelesson 인증번호: ${code}`);
 
     return {
       message: '인증번호가 전송되었습니다.',

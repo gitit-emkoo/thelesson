@@ -323,7 +323,7 @@ export default function PhoneAuthScreen() {
               ) : (
                 <>
                   <Title>전화번호로 시작하기</Title>
-                  <Subtitle>간편하게 전화번호로 김쌤을 이용하실 수 있어요</Subtitle>
+                  <Subtitle>간편하게 전화번호로 thelesson을 이용하실 수 있어요</Subtitle>
                 </>
               )}
 

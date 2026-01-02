@@ -1,5 +1,5 @@
 {
-  "name": "kimssam-app",
+  "name": "thelesson-app",
   "version": "1.0.0",
   "main": "expo/AppEntry.js",
   "scripts": {
@@ -34,7 +34,8 @@
     "react-native-signature-canvas": "^4.7.4",
     "react-native-webview": "13.12.5",
     "styled-components": "^6.1.13",
-    "zustand": "^5.0.8"
+    "zustand": "^5.0.8",
+    "dotenv": "^17.2.3"
   },
   "devDependencies": {
     "@react-native-community/cli": "^13.6.6",
@@ -43,7 +44,6 @@
     "@types/react-native-dotenv": "^0.2.2",
     "@types/styled-components": "^5.1.35",
     "@types/styled-components-react-native": "^5.2.5",
-    "dotenv": "^17.2.3",
     "typescript": "~5.7.3"
   },
   "private": true

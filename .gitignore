@@ -54,6 +54,15 @@ yarn-error.*
 .env.production.local
 packages/backend/firebase-service-account.json
 
+# Firebase keys (보안상 Git에 포함하지 않음)
+key/
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!app.config.js
+!eas.json
+
 # Docs
 *.md
 *.txt

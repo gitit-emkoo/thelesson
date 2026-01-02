@@ -22,7 +22,7 @@ const config: runtime.GetPrismaClientConfig = {
       "value": "prisma-client"
     },
     "output": {
-      "value": "C:\\Users\\cns83\\OneDrive\\바탕 화면\\kimssam\\packages\\backend\\src\\generated\\prisma",
+      "value": "C:\\Users\\cns83\\OneDrive\\바탕 화면\\thelesson\\packages\\backend\\src\\generated\\prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -36,7 +36,7 @@ const config: runtime.GetPrismaClientConfig = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "C:\\Users\\cns83\\OneDrive\\바탕 화면\\kimssam\\packages\\backend\\prisma\\schema.prisma",
+    "sourceFilePath": "C:\\Users\\cns83\\OneDrive\\바탕 화면\\thelesson\\packages\\backend\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativePath": "../../../prisma",

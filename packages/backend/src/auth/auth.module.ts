@@ -14,7 +14,7 @@ import { JwtAuthGuard } from './jwt-auth/jwt-auth.guard';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET') || 'kimssam-secret-key-change-in-production',
+        secret: configService.get<string>('JWT_SECRET') || 'thelesson-secret-key-change-in-production',
         signOptions: {
           // number of seconds (30 days)
           expiresIn: Number(configService.get<string>('JWT_EXPIRES_IN')) || 60 * 60 * 24 * 30,
